@@ -2,6 +2,13 @@
 
 Application web complète pour tester et comparer deux modèles d'autoencodeurs convolutifs (CAE) pour la détection d'anomalies dans les images.
 
+<img width="1906" height="868" alt="image" src="https://github.com/user-attachments/assets/b8a6b1ef-261e-4980-b33b-8b7142519ba2" />
+
+<br>
+
+<img width="1900" height="874" alt="image" src="https://github.com/user-attachments/assets/52cd5990-1285-4caa-9620-9adbbcb2c1ec" />
+
+
 ## 📋 Fonctionnalités
 
 ### Backend (Flask API)
