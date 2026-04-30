@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anomaly Detection System - AI Autoencoder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --card-light: rgba(255, 255, 255, 0.9);
+            --card-dark: rgba(30, 41, 59, 0.9);
+            --text-light: #0f172a;
+            --text-dark: #f1f5f9;
+            --border-light: rgba(226, 232, 240, 0.6);
+            --border-dark: rgba(71, 85, 105, 0.4);
+        }
+        
+        * {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        body {
+            background: var(--bg-light);
+            color: var(--text-light);
+        }
+        
+        body.dark {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-dark);
+        }
+        
+        /* Glass Morphism Effects */
+        .glass-card {
+            background: var(--card-light);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border-light);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        
+        body.dark .glass-card {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Gradient Backgrounds */
+        .gradient-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+        
+        .gradient-accent {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Floating Navbar */
+        .floating-nav {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            right: 1rem;
+            z-index: 50;
+            border-radius: 1rem;
+        }
+        
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        body.dark .upload-zone {
+            border-color: var(--border-dark);
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        body.dark .upload-zone:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .upload-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        /* Animations */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        .animate-slide-in {
+            animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        .animate-scale-in {
+            animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .anomaly-badge {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Stat Cards */
+        .stat-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        body.dark .stat-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+        
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 4px solid rgba(99, 102, 241, 0.1);
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--border-light);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        body.dark .theme-toggle {
+            background: var(--primary);
+        }
+        
+        .theme-toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        body.dark .theme-toggle-slider {
+            transform: translateX(30px);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+        
+        body.dark ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Model Selection Cards */
+        .model-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Image Comparison */
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .image-container:hover {
+            transform: scale(1.02);
+        }
+        
+        .image-container img {
+            transition: transform 0.3s ease;
+        }
+        
+        .image-container:hover img {
+            transform: scale(1.05);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .floating-nav {
+                top: 0.5rem;
+                left: 0.5rem;
+                right: 0.5rem;
+            }
+            
+            .stat-card:hover {
+                transform: translateY(-4px);
+            }
+        }
+        
+        /* Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen pt-24 pb-8">
+    <!-- Floating Navigation -->
+    <nav class="glass-card floating-nav shadow-2xl">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center shadow-lg">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold gradient-text">Anomaly Detection</h1>
+                        <p class="text-xs sm:text-sm opacity-60">AI-Powered Autoencoder System</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4 sm:space-x-6">
+                    <!-- Status Indicator -->
+                    <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full glass-card">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium" id="status">Connecté</span>
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <div class="theme-toggle" id="themeToggle" role="button" aria-label="Toggle dark mode">
+                        <div class="theme-toggle-slider">
+                            <svg class="w-4 h-4 sun-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                            </svg>
+                            <svg class="w-4 h-4 moon-icon hidden" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 animate-fade-in">
+            <div class="glass-card rounded-2xl p-4 sm:p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm opacity-70 mb-1 font-medium">Images Analysées</p>
+                        <p class="text-2xl sm:text-3xl font-bold" id="totalImages">0</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-4 sm:p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm opacity-70 mb-1 font-medium">Anomalies</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-red-500" id="anomaliesCount">0</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-4 sm:p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm opacity-70 mb-1 font-medium">Normales</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-green-500" id="normalCount">0</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-4 sm:p-6 stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs sm:text-sm opacity-70 mb-1 font-medium">Erreur Moy.</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-purple-500" id="avgError">0.000</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="glass-card rounded-2xl p-6 sm:p-8 mb-8 animate-slide-in">
+            <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
+                <svg class="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Analyser une Image
+            </h2>
+            
+            <!-- Model Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-4 opacity-80">Sélectionner le Modèle</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="relative cursor-pointer model-card">
+                        <input type="radio" name="model" value="best_cae" checked class="peer sr-only">
+                        <div class="glass-card rounded-xl p-5 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg peer-checked:shadow-indigo-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-sm sm:text-base">Best CAE Model</h3>
+                                        <p class="text-xs opacity-60">Meilleur modèle</p>
+                                    </div>
+                                </div>
+                                <svg class="w-6 h-6 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                    
+                    <label class="relative cursor-pointer model-card">
+                        <input type="radio" name="model" value="cae_optuna" class="peer sr-only">
+                        <div class="glass-card rounded-xl p-5 border-2 border-transparent peer-checked:border-purple-500 peer-checked:shadow-lg peer-checked:shadow-purple-500/20">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-sm sm:text-base">CAE Optuna</h3>
+                                        <p class="text-xs opacity-60">Optimisé Optuna</p>
+                                    </div>
+                                </div>
+                                <svg class="w-6 h-6 text-purple-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Threshold Slider -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-sm font-semibold opacity-80">Seuil de Détection</label>
+                    <span id="thresholdValue" class="text-lg font-bold gradient-text">0.020</span>
+                </div>
+                <input type="range" id="threshold" min="0.005" max="0.1" step="0.005" value="0.02" 
+                       class="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                <div class="flex justify-between text-xs opacity-50 mt-2">
+                    <span>0.005</span>
+                    <span>0.1</span>
+                </div>
+            </div>
+            
+            <!-- Upload Zone -->
+            <div id="uploadZone" class="upload-zone rounded-2xl p-8 sm:p-12 text-center mb-6">
+                <input type="file" id="fileInput" accept="image/*,.tif" class="hidden" multiple>
+                <svg class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p class="text-base sm:text-lg font-semibold mb-2">Glissez-déposez vos images ici</p>
+                <p class="text-sm opacity-60 mb-4">ou cliquez pour sélectionner</p>
+                <p class="text-xs opacity-40">Formats: JPG, PNG, TIF</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 sm:gap-4">
+                <button id="analyzeBtn" class="btn-primary text-white px-6 sm:px-8 py-3 rounded-xl font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>Analyser</span>
+                </button>
+                
+                <button id="compareBtn" class="bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white px-6 sm:px-8 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                    </svg>
+                    <span class="hidden sm:inline">Comparer les Modèles</span>
+                    <span class="sm:hidden">Comparer</span>
+                </button>
+                
+                <button id="clearBtn" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-6 sm:px-8 py-3 rounded-xl font-semibold flex items-center space-x-2 transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Effacer</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <!-- Single Image Result -->
+            <div id="singleResult" class="glass-card rounded-2xl p-6 sm:p-8 mb-8 animate-scale-in hidden">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
+                    <svg class="w-6 h-6 sm:w-7 sm:h-7 mr-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Résultats de l'Analyse
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                    <!-- Images Comparison -->
+                    <div class="space-y-4">
+                        <h3 class="text-base sm:text-lg font-semibold mb-4 opacity-80">Comparaison Visuelle</h3>
+                        
+                        <div class="glass-card rounded-xl p-4">
+                            <p class="text-xs sm:text-sm font-medium opacity-70 mb-3">Image Originale</p>
+                            <div class="image-container">
+                                <img id="originalImg" class="w-full rounded-lg" alt="Image originale">
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card rounded-xl p-4">
+                            <p class="text-xs sm:text-sm font-medium opacity-70 mb-3">Reconstruction</p>
+                            <div class="image-container">
+                                <img id="reconstructedImg" class="w-full rounded-lg" alt="Image reconstruite">
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card rounded-xl p-4">
+                            <p class="text-xs sm:text-sm font-medium opacity-70 mb-3">Carte de Différence</p>
+                            <div class="image-container">
+                                <img id="differenceImg" class="w-full rounded-lg" alt="Carte de différence">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metrics -->
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold mb-4 opacity-80">Métriques</h3>
+                        
+                        <!-- Classification Badge -->
+                        <div id="classificationBadge" class="mb-6 p-6 sm:p-8 rounded-2xl text-center">
+                            <div id="classIcon" class="text-5xl sm:text-6xl mb-3"></div>
+                            <h4 id="classLabel" class="text-xl sm:text-2xl font-bold mb-2"></h4>
+                            <p id="classConfidence" class="text-sm opacity-80"></p>
+                        </div>
+                        
+                        <!-- Metrics Cards -->
+                        <div class="space-y-3 sm:space-y-4">
+                            <div class="glass-card rounded-xl p-4">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs sm:text-sm font-medium opacity-70">Erreur de Reconstruction</span>
+                                    <span id="reconError" class="text-base sm:text-lg font-bold"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                    <div id="reconErrorBar" class="h-2.5 rounded-full progress-bar"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="glass-card rounded-xl p-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs sm:text-sm font-medium opacity-70">Seuil Utilisé</span>
+                                    <span id="usedThreshold" class="text-base sm:text-lg font-bold"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="glass-card rounded-xl p-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs sm:text-sm font-medium opacity-70">Modèle Utilisé</span>
+                                    <span id="usedModel" class="text-base sm:text-lg font-bold"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="glass-card rounded-xl p-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs sm:text-sm font-medium opacity-70">Timestamp</span>
+                                    <span id="timestamp" class="text-xs sm:text-sm opacity-70"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Comparison Result -->
+            <div id="comparisonResult" class="glass-card rounded-xl p-8 mb-8 result-card hidden">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                    <i class="fas fa-balance-scale mr-3 text-purple-600"></i>
+                    Comparaison des Modèles
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Original Image -->
+                    <div class="bg-slate-50 rounded-lg p-4">
+                        <p class="text-sm font-medium text-slate-600 mb-2">Image Originale</p>
+                        <img id="compOriginalImg" class="w-full rounded-lg border border-slate-200 mb-4">
+                    </div>
+                    
+                    <!-- Model 1 -->
+                    <div id="model1Card" class="bg-slate-50 rounded-lg p-4">
+                        <p class="text-sm font-medium text-slate-600 mb-2">Best CAE Model</p>
+                        <img id="model1Img" class="w-full rounded-lg border border-slate-200 mb-4">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">Erreur:</span>
+                                <span id="model1Error" class="font-bold"></span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">Classification:</span>
+                                <span id="model1Class" class="font-bold"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Model 2 -->
+                    <div id="model2Card" class="bg-slate-50 rounded-lg p-4">
+                        <p class="text-sm font-medium text-slate-600 mb-2">CAE Optuna</p>
+                        <img id="model2Img" class="w-full rounded-lg border border-slate-200 mb-4">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">Erreur:</span>
+                                <span id="model2Error" class="font-bold"></span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-600">Classification:</span>
+                                <span id="model2Class" class="font-bold"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Batch Results -->
+            <div id="batchResult" class="glass-card rounded-xl p-8 result-card hidden">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                    <i class="fas fa-layer-group mr-3 text-purple-600"></i>
+                    Analyse par Lot
+                </h2>
+                
+                <div class="mb-6">
+                    <canvas id="batchChart" class="w-full" style="max-height: 300px;"></canvas>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-base sm:text-lg font-semibold mb-3 opacity-80">Distribution des erreurs</h3>
+                    <canvas id="errorDistributionChart" class="w-full" style="max-height: 300px;"></canvas>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                        <div class="glass-card rounded-lg p-3">
+                            <p class="text-xs opacity-70">Moyenne</p>
+                            <p id="errorMean" class="text-sm font-bold">-</p>
+                        </div>
+                        <div class="glass-card rounded-lg p-3">
+                            <p class="text-xs opacity-70">Ecart-type</p>
+                            <p id="errorStd" class="text-sm font-bold">-</p>
+                        </div>
+                        <div class="glass-card rounded-lg p-3">
+                            <p class="text-xs opacity-70">Min</p>
+                            <p id="errorMin" class="text-sm font-bold">-</p>
+                        </div>
+                        <div class="glass-card rounded-lg p-3">
+                            <p class="text-xs opacity-70">Max</p>
+                            <p id="errorMax" class="text-sm font-bold">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Fichier</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Erreur</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Classification</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Confiance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody" class="divide-y divide-slate-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="glass-card rounded-xl p-8 text-center">
+                <div class="loading-spinner w-16 h-16 rounded-full mx-auto mb-4"></div>
+                <p class="text-lg font-medium text-slate-800">Analyse en cours...</p>
+                <p class="text-sm text-slate-600 mt-2">Veuillez patienter</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
